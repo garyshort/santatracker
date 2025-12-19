@@ -665,7 +665,15 @@
 
     function initMap() {
       state.map = L.map("map", {
-        worldCopyJump: true
+        worldCopyJump: true,
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        touchZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false
       }).setView([0, 0], 2);
 
       L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
