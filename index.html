@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Santa Tracker</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0e1116;
+      --panel: #161b22;
+      --accent: #2ea043;
+      --text: #e6edf3;
+      --muted: #9fb1c1;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 12px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid #242b33;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+    }
+
+    .tag {
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #1f6feb;
+      font-size: 12px;
+      color: #f7fbff;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 12px;
+      padding: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid #242b33;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      order: 1;
+    }
+
+    .map-section {
+      order: 2;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .meta strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .fun-fact {
+      padding: 12px;
+      border-radius: 10px;
+      background: #1b2130;
+      border: 1px dashed #2f3947;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #c5d1dd;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      border: 1px solid #2f3947;
+      background: #1f6feb;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    button.secondary {
+      background: #161b22;
+      color: #f0f6fc;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    #map {
+      width: 100%;
+      height: calc(100vh - 120px);
+      border: 1px solid #242b33;
+      border-radius: 12px;
+    }
+
+    .status-line {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pill {
+      border: 1px solid #2f3947;
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: #c5d1dd;
+      background: #131823;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    ul.cities {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    ul.cities li {
+      padding: 8px 10px;
+      background: #131823;
+      border-radius: 8px;
+      border: 1px solid #202734;
+      font-size: 13px;
+      color: #d7e3ef;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .city-status {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .city-card {
+      padding: 8px 10px;
+      border: 1px solid #202734;
+      border-radius: 10px;
+      background: #111722;
+    }
+
+    .city-card strong {
+      display: block;
+      font-size: 11px;
+      color: #9fb1c1;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 4px;
+    }
+
+    .city-card span {
+      color: #e6edf3;
+      font-size: 13px;
+    }
+
+    /* Nice-O-Meter gauges */
+    .gauges {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .gauge-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid #202734;
+      border-radius: 10px;
+      background: #111722;
+    }
+
+    .gauge-name {
+      font-weight: 600;
+      color: #e6edf3;
+      letter-spacing: 0.3px;
+    }
+
+    .gauge-track {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
+    }
+
+    .gauge-segment {
+      height: 10px;
+      border-radius: 4px;
+      background: #1f2633;
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    .gauge-segment.lit-red {
+      background: #d14343;
+    }
+
+    .gauge-segment.lit-amber {
+      background: #e3b341;
+    }
+
+    .gauge-segment.lit-green {
+      background: #2ea043;
+    }
+
+    .gauge-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #9fb1c1;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    @media (max-width: 960px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        order: 2;
+      }
+
+      .map-section {
+        order: 1;
+      }
+
+      #map {
+        height: 60vh;
+      }
+
+      .controls {
+        gap: 6px;
+      }
+
+      button {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 12px;
+      }
+
+      .meta {
+        grid-template-columns: 1fr;
+      }
+
+      .city-status {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="tag">Santa Tracker</span>
+      <h1>Live path + simulator</h1>
+    </div>
+    <div class="status-line" id="status-line">
+      Loading schedule…
+    </div>
+  </header>
+
+  <div class="container">
+    <section class="map-section">
+      <div id="map"></div>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <button id="simulate-btn" title="Run a fast simulation">Start simulation (3s/band)</button>
+        <button id="live-btn" class="secondary" title="Return to real-time tracking">Return to live</button>
+      </div>
+      <h2 id="band-title">Band details</h2>
+      <div class="meta">
+        <div>
+          <strong>Presents delivered</strong>
+          <div id="band-pop">—</div>
+        </div>
+        <div>
+          <strong>Current Location</strong>
+          <div id="band-coord">—</div>
+        </div>
+      </div>
+
+      <div>
+        <strong>Cities</strong>
+        <div class="city-status">
+          <div class="city-card">
+            <strong>Current</strong>
+            <span id="city-current">—</span>
+          </div>
+          <div class="city-card">
+            <strong>Next</strong>
+            <span id="city-next">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="fun-fact" id="fun-fact">
+        Fun fact will appear here.
+      </div>
+
+      <div>
+        <strong>Nice-O-Meter</strong>
+        <div class="gauges" id="gauges-container"></div>
+      </div>
+    </section>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+  <script>
+    const BAND_MINUTES = 4;
+    const SIM_STEP_MS = 5000;
+    const START_MONTH = 11; // December is 11 in JS Date
+    const START_DAY = 25;
+    const START_HOUR = 0;
+    const NICE_NAMES = ["Pheobe", "Lexi", "George", "Emilia"];
+
+    const state = {
+      bands: [],
+      map: null,
+      marker: null,
+      liveTimer: null,
+      simTimer: null,
+      simTickTimer: null,
+      mode: "live",
+      currentIndex: 0,
+      santaIcon: null,
+      gaugeTimer: null
+    };
+
+    // Midnight Dec 25 at longitude 179 (~UTC+12) corresponds to 12:00 UTC on Dec 24.
+    function getStartOfRouteUtc(now = new Date()) {
+      return new Date(Date.UTC(now.getUTCFullYear(), START_MONTH, START_DAY - 1, 12, 0, 0, 0));
+    }
+
+    function clampIndex(idx) {
+      if (!state.bands.length) return 0;
+      return Math.max(0, Math.min(idx, state.bands.length - 1));
+    }
+
+    function computeLiveIndex(now = new Date()) {
+      const start = getStartOfRouteUtc(now);
+      const diffMs = now - start;
+      if (diffMs <= 0) return 0;
+      const band = Math.floor(diffMs / (BAND_MINUTES * 60 * 1000));
+      return clampIndex(band);
+    }
+
+    function formatNumber(n) {
+      return n.toLocaleString("en-US");
+    }
+
+    function formatTimeUtc(d) {
+      return d.toLocaleString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC"
+      });
+    }
+
+    function randomIntInclusive(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function isValidCoord(lat, lon) {
+      return Number.isFinite(lat) && Number.isFinite(lon);
+    }
+
+    function initGauges() {
+      const container = document.getElementById("gauges-container");
+      container.innerHTML = "";
+      NICE_NAMES.forEach((name) => {
+        const row = document.createElement("div");
+        row.className = "gauge-row";
+
+        const title = document.createElement("div");
+        title.className = "gauge-name";
+        title.textContent = name;
+
+        const track = document.createElement("div");
+        track.className = "gauge-track";
+        track.dataset.name = name;
+        for (let i = 0; i < 10; i += 1) {
+          const seg = document.createElement("div");
+          seg.className = "gauge-segment";
+          track.appendChild(seg);
+        }
+
+        const labels = document.createElement("div");
+        labels.className = "gauge-labels";
+        labels.innerHTML = `<span>naughty</span><span>nice</span>`;
+
+        row.appendChild(title);
+        row.appendChild(track);
+        row.appendChild(labels);
+        container.appendChild(row);
+      });
+    }
+
+    function setGaugeValue(name, value) {
+      const track = document.querySelector(`.gauge-track[data-name="${name}"]`);
+      if (!track) return;
+      const segments = Array.from(track.children);
+      segments.forEach((seg, idx) => {
+        seg.classList.remove("lit-red", "lit-amber", "lit-green");
+        if (idx < value) {
+          if (value > 5) {
+            seg.classList.add("lit-green");
+          } else if (value === 5) {
+            seg.classList.add("lit-amber");
+          } else {
+            seg.classList.add("lit-red");
+          }
+        }
+      });
+    }
+
+    function randomizeGauges() {
+      NICE_NAMES.forEach((name) => {
+        const val = randomIntInclusive(1, 10); // ensure at least one segment is lit
+        setGaugeValue(name, val);
+      });
+    }
+
+    function getPositionForBand(band, bandElapsedMs = 0) {
+      if (band.type === "sparse" || !band.cities || band.cities.length === 0) {
+        return { lat: band.waypoint.lat, lon: band.waypoint.lon, cityIdx: -1, cityName: `Waypoint ${band.longitude_band}` };
+      }
+      const perCity = (BAND_MINUTES * 60 * 1000) / band.cities.length;
+      const cityIdx = Math.min(
+        band.cities.length - 1,
+        Math.floor(bandElapsedMs / perCity)
+      );
+      const city = band.cities[cityIdx];
+      return { lat: city.lat, lon: city.lon, cityIdx, cityName: city.name };
+    }
+
+    function bandDeliveredCount(band) {
+      if (band.type === "city") {
+        return band.cities.reduce((acc, c) => acc + (c.population || 0), 0);
+      }
+      if (band.type === "metro") {
+        if (band.estimated_population) return band.estimated_population;
+        return band.cities.reduce((acc, c) => acc + (c.population || 0), 0);
+      }
+      return 0;
+    }
+
+    function deliveredThroughCity(index, cityIdx) {
+      let total = 0;
+      const idx = clampIndex(index);
+      for (let i = 0; i < idx; i += 1) {
+        total += bandDeliveredCount(state.bands[i]);
+      }
+      const band = state.bands[idx];
+      if (!band) return total;
+      if (band.type !== "sparse" && band.cities && band.cities.length > 0 && cityIdx >= 0) {
+        const limit = Math.min(cityIdx, band.cities.length - 1);
+        for (let j = 0; j <= limit; j += 1) {
+          total += band.cities[j].population || 0;
+        }
+      } else if (band.type === "metro" && (!band.cities || band.cities.length === 0) && band.estimated_population) {
+        // Fallback for metro with no explicit cities.
+        total += band.estimated_population;
+      }
+      return total;
+    }
+
+    function updateStatusLine(text) {
+      const el = document.getElementById("status-line");
+      el.textContent = text;
+    }
+
+    function updateBandUI(idx, { autoPan = true, now = null } = {}) {
+      if (!state.bands.length) return;
+      const band = state.bands[clampIndex(idx)];
+      state.currentIndex = clampIndex(idx);
+      const start = getStartOfRouteUtc();
+      let bandElapsedMs = 0;
+      if (state.mode === "simulation" && state.simBandStartMs) {
+        const progress = Math.min(1, (Date.now() - state.simBandStartMs) / SIM_STEP_MS);
+        bandElapsedMs = progress * BAND_MINUTES * 60 * 1000;
+      } else if (now) {
+        const diffMs = now.getTime() - start.getTime();
+        if (diffMs > 0) {
+          bandElapsedMs = diffMs % (BAND_MINUTES * 60 * 1000);
+        }
+      }
+
+      const { lat, lon, cityIdx, cityName } = getPositionForBand(band, bandElapsedMs);
+      if (!isValidCoord(lat, lon)) {
+        updateStatusLine("Invalid coordinates for current band/city; skipping update.");
+        return;
+      }
+      const delivered = deliveredThroughCity(state.currentIndex, cityIdx);
+
+      if (!state.marker) {
+        state.marker = L.marker([lat, lon], { icon: state.santaIcon }).addTo(state.map);
+      } else {
+        state.marker.setLatLng([lat, lon]);
+      }
+
+      if (autoPan) {
+        // Zoom in more when we have cities to show more map detail/labels.
+        const targetZoom = band.type === "sparse" ? 4 : 6;
+        state.map.setView([lat, lon], targetZoom, { animate: true });
+      }
+
+      const bandTitle = document.getElementById("band-title");
+      bandTitle.textContent = `Longitude ${band.longitude_band}`;
+
+      document.getElementById("band-pop").textContent = `${formatNumber(delivered)}`;
+      document.getElementById("band-coord").textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+      const currentCityEl = document.getElementById("city-current");
+      const nextCityEl = document.getElementById("city-next");
+      if (band.type !== "sparse" && band.cities && cityIdx >= 0 && band.cities[cityIdx]) {
+        const c = band.cities[cityIdx];
+        currentCityEl.textContent = c.country ? `${c.name} (${c.country})` : c.name;
+      } else {
+        currentCityEl.textContent = cityName || "—";
+      }
+
+      let nextCity = "—";
+      if (band.cities && band.cities.length > 0 && cityIdx + 1 < band.cities.length) {
+        const n = band.cities[cityIdx + 1];
+        nextCity = n.country ? `${n.name} (${n.country})` : n.name;
+      } else if (state.currentIndex + 1 < state.bands.length) {
+        const nextBand = state.bands[state.currentIndex + 1];
+        if (nextBand.cities && nextBand.cities.length > 0) {
+          const n = nextBand.cities[0];
+          nextCity = n.country ? `${n.name} (${n.country})` : n.name;
+        } else {
+          nextCity = `Waypoint ${nextBand.longitude_band}`;
+        }
+      } else {
+        nextCity = "Route complete";
+      }
+      nextCityEl.textContent = nextCity;
+
+      document.getElementById("fun-fact").textContent = band.fun_fact;
+
+      const status = state.mode === "live"
+        ? `Live mode: started at ${formatTimeUtc(getStartOfRouteUtc())}; updating every ${BAND_MINUTES} minutes.`
+        : `Simulation running: advancing band ${state.currentIndex + 1} of ${state.bands.length} every ${SIM_STEP_MS / 1000} seconds.`;
+      updateStatusLine(status);
+    }
+
+    function startLiveMode() {
+      clearInterval(state.simTimer);
+      state.simTimer = null;
+      clearInterval(state.simTickTimer);
+      state.simTickTimer = null;
+      clearInterval(state.gaugeTimer);
+      state.gaugeTimer = null;
+      state.mode = "live";
+      const tick = () => updateBandUI(computeLiveIndex(), { autoPan: true, now: new Date() });
+      tick();
+      clearInterval(state.liveTimer);
+      state.liveTimer = setInterval(tick, 5000);
+      randomizeGauges();
+      state.gaugeTimer = setInterval(randomizeGauges, 60000);
+    }
+
+    function startSimulation() {
+      clearInterval(state.liveTimer);
+      state.liveTimer = null;
+      clearInterval(state.simTimer);
+      clearInterval(state.simTickTimer);
+      clearInterval(state.gaugeTimer);
+      state.gaugeTimer = null;
+      state.mode = "simulation";
+      state.currentIndex = 0;
+      state.simBandStartMs = Date.now();
+      updateBandUI(state.currentIndex, { autoPan: true });
+      randomizeGauges();
+      state.simTimer = setInterval(() => {
+        if (state.currentIndex >= state.bands.length - 1) {
+          clearInterval(state.simTimer);
+          clearInterval(state.simTickTimer);
+          updateStatusLine("Simulation complete. Use “Return to live” to sync to real time.");
+          return;
+        }
+        state.currentIndex += 1;
+        state.simBandStartMs = Date.now();
+        updateBandUI(state.currentIndex, { autoPan: true });
+      }, SIM_STEP_MS);
+      state.gaugeTimer = setInterval(randomizeGauges, 1000);
+      // Intra-band city updates while the band runs (keep marker in view).
+      state.simTickTimer = setInterval(() => {
+        updateBandUI(state.currentIndex, { autoPan: true });
+      }, 1000);
+    }
+
+    function initMap() {
+      state.map = L.map("map", {
+        worldCopyJump: true
+      }).setView([0, 0], 2);
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 18,
+        subdomains: "abcd",
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      }).addTo(state.map);
+
+      // Sleigh icon (local asset) for a festive marker.
+      state.santaIcon = L.icon({
+        iconUrl: "sleigh.png",
+        iconSize: [72, 72],
+        iconAnchor: [36, 58],
+        popupAnchor: [0, -48],
+        className: "santa-icon sleigh-icon"
+      });
+    }
+
+    async function loadData() {
+      const res = await fetch("data/data.json", { cache: "no-cache" });
+      if (!res.ok) {
+        throw new Error("Unable to load data.json");
+      }
+      const json = await res.json();
+      if (!json.bands || !Array.isArray(json.bands)) {
+        throw new Error("Invalid data format");
+      }
+      state.bands = json.bands;
+      updateStatusLine(`Loaded ${state.bands.length} bands (live mode available).`);
+    }
+
+    async function main() {
+      try {
+        initMap();
+        await loadData();
+        initGauges();
+        randomizeGauges();
+        startLiveMode();
+      } catch (err) {
+        console.error(err);
+        updateStatusLine(err.message || "Failed to load tracker data.");
+      }
+    }
+
+    document.getElementById("simulate-btn").addEventListener("click", startSimulation);
+    document.getElementById("live-btn").addEventListener("click", startLiveMode);
+
+    main();
+  </script>
+</body>
+</html>
+
