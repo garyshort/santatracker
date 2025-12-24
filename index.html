@@ -388,9 +388,9 @@
       gaugeTimer: null
     };
 
-    // System test anchor: shift live start 24h earlier (Dec 23 12:00 UTC instead of Dec 24).
+    // Live start: Dec 24 12:00 UTC (midnight Dec 25 at longitude ~179, UTC+12).
     function getStartOfRouteUtc(now = new Date()) {
-      return new Date(Date.UTC(now.getUTCFullYear(), START_MONTH, START_DAY - 2, 12, 0, 0, 0));
+      return new Date(Date.UTC(now.getUTCFullYear(), START_MONTH, START_DAY - 1, 12, 0, 0, 0));
     }
 
     function clampIndex(idx) {
